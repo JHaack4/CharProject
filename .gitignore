@@ -1,0 +1,34 @@
+#  python
+*.pyc
+
+#  vs code
+.vscode
+
+#  test output
+sample/*.json
+
+test_data/*
+
+#  pictures
+*.png
+*.jpg
+*.tif
+
+# Cmake
+CMakeCache.txt
+cmake/
+Makefile
+CMakeFiles/
+CodeblocksProj/
+
+# Executables
+#ImageProc
+
+# Other
+Debug
+Midway
+Output
+config.ini
+*~
+*.pdf
+src/OCR/models/testing/*
