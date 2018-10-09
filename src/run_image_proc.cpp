@@ -15,9 +15,54 @@
 
 int main(int, char* argv[]) {
 
-    std::cout << "Running..." << std::endl;
+    log("Running...", LogLevel::debug);
 
-    cv::Mat img = cv::imread("maps" + std::to_string(PATH_SEP) + "00065.tif", CV_LOAD_IMAGE_GRAYSCALE);
+    // Change this if you want to do something else
+    std::string path_to_main_directory = "C:\\Users\\Jordan Haack\\Desktop\\CharProject2";
+    NAME = "00065u";
+
+    DRAW_DEBUG_IMAGES = true;
+    std::string o = "output";
+    std::string maps = "maps";
+    DEBUG_PATH = path_to_main_directory + PATH_SEP + o;
+    std::string path_to_map = path_to_main_directory + PATH_SEP + maps + PATH_SEP + NAME + ".tif";
+    make_dir(DEBUG_PATH, NAME);
+    log("Loading image from: ", LogLevel::debug);
+    log(path_to_map, LogLevel::debug);
+
+    // load an image
+    cv::Mat raw_img = cv::imread(path_to_map, CV_LOAD_IMAGE_GRAYSCALE);
+    debug_imwrite(~raw_img, "a1 Echo");
+    log("Image loaded", LogLevel::debug);
+
+    // binarize image
+    cv::Mat imBin;
+    binarize(raw_img, imBin);
+    debug_imwrite(imBin, "a2 Binary");
+    log("Image Binarized", LogLevel::debug);
+
+    // Thin image
+    // First, erode to remove large blocks (these regions take too long to thin)
+    int erosion_size = 20;
+    cv::Mat erosion(imBin.rows, imBin.cols, imBin.type(), 0.0);
+    cv::Mat element = getStructuringElement(cv::MORPH_RECT,
+              cv::Size(2 * (erosion_size/2) + 1, 2 * (erosion_size/2) + 1),
+              cv::Point((erosion_size/2), (erosion_size/2)) );
+    cv::erode(imBin, erosion, element);
+    cv::Mat imBoundary;
+    imBoundary = imBin & (~erosion);
+    debug_imwrite(imBoundary, "a3 Boundary");
+    log("Boundary Computed", LogLevel::debug);
+
+    // Apply iterative thinning algorithm
+    cv::Mat imThin;
+    cv::Mat imBranchPoints;
+    thinning5(imBoundary, imThin, imBranchPoints, true, 20);
+
+    cv::Mat bgrThin;
+    package_bgr({(imBin & ~imThin) | imBranchPoints, imBin & ~imThin, imBin & ~imBranchPoints}, bgrThin);
+    debug_imwrite(bgrThin, "a4 Thinned");
+    log("Image Thinned", LogLevel::debug);
 
     return 0;
 
@@ -29,7 +74,7 @@ int main(int, char* argv[]) {
  * @param[in]  argc
  * @param[in]  argv
  */
-int main2(int, char* argv[])
+/*int main2(int, char* argv[])
 {
     std::string options_file = argv[1];
     std::ifstream t(options_file, std::ifstream::binary);
@@ -64,6 +109,6 @@ int main2(int, char* argv[])
 
     dump_json();
     return 0;
-}
+}*/
 
 

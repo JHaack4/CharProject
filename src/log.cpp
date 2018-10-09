@@ -30,7 +30,7 @@ std::string to_string(LogLevel level)
 // should not be this difficult
 void log_time()
 {
-    int mod = PATH_SEP == '/' ? 1000 : 100000;
+    int mod = 100000;
     auto now = std::chrono::system_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % mod;
 

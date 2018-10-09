@@ -687,10 +687,10 @@ void thinning5(const cv::Mat& src, cv::Mat& dst, cv::Mat& branch_points, bool sk
         loopAgain1 = false; loopAgain2 = false;
         thinningIteration5(dst, 0, skel, loopAgain1, markerMask, nextWhiteX, nextWhiteY, firstWhiteX, firstWhiteY, firstRun);
         firstRun = false;
-        std::cout << "here5a" << std::endl;
+        //std::cout << "here5a" << std::endl;
         thinningIteration5(dst, 1, skel, loopAgain2, markerMask, nextWhiteX, nextWhiteY, firstWhiteX, firstWhiteY, false);
         --max_iter;
-        std::cout << "here5" << std::endl;
+        //std::cout << "here5" << std::endl;
     }
     while ((loopAgain1 || loopAgain2) && max_iter > 0);
 
