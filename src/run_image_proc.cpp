@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
             }
         }
         color_labels(labels, bgrL);
-        debug_imwrite(bgrL, "a8 Long lines ownership");
+        debug_imwrite(bgrL, "a8 markings ownership");
         log("--Debug image", LogLevel::debug);
     }
 
