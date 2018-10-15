@@ -50,6 +50,19 @@ void color_connected_components(const cv::Mat& input, cv::Mat& output,
     }
 }
 
+void draw_pixel_chains(cv::Mat& imBin, std::vector< std::vector<cv::Point>>& pixelChains, cv::Mat& output) {
+
+    if (!DRAW_DEBUG_IMAGES) return;
+
+    output = cv::Mat::zeros(imBin.size(), CV_32SC1);
+
+    for (size_t i = 0; i < pixelChains.size(); ++i) {
+        for (size_t j = 0; j < pixelChains[i].size(); ++j) {
+            output.at<int>(pixelChains[i][j]) = (int)(i+1);
+        }
+    }
+}
+
 // Give a deterministic color to each integer.
 cv::Vec3b id_color(int i) {
     int b = (57 * i * i + 88)% 256;
@@ -65,6 +78,7 @@ void color_labels(const cv::Mat& input, cv::Mat& output,
 {
     if (!DRAW_DEBUG_IMAGES) return;
 
+    srand(31);
     std::vector<cv::Vec3b> random_colors;
     for (size_t i = 0; i < 1000; ++i) {
         pixel_t b = rand() % (rangeMax[0] - rangeMin[0] + 1) + rangeMin[2];

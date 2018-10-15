@@ -495,6 +495,7 @@ void combine_long_lines(std::vector<MyLine>& lines, std::vector<MyVertex>& verts
 // further segments, if necessary.
 void segment_lines_helper(int line_id, std::vector< cv::Point >& points, int ptSt, int ptEnd,
                           std::vector< MyLine >& lines, std::vector< MyVertex >& verts,
+                          std::vector<std::vector<cv::Point>>& new_chains,
                           int HEIGHT_THRESHOLD, int TOO_SHORT_THRESHOLD) {
 
     // Find the best fit line for the point cloud "points"
@@ -502,16 +503,18 @@ void segment_lines_helper(int line_id, std::vector< cv::Point >& points, int ptS
     line.calculateDimensions(points, ptSt, ptEnd);
 
     // Too short. Don't segment any further
-    if (ptEnd - ptSt < TOO_SHORT_THRESHOLD || ptEnd - ptSt < 4) return;
+    bool tooSmall = ptEnd - ptSt < TOO_SHORT_THRESHOLD || ptEnd - ptSt < 4;
 
     // Bad line fit. Segment further.
-    if (line.height_ > HEIGHT_THRESHOLD) {
+    if (line.height_ > HEIGHT_THRESHOLD && !tooSmall) {
 
         // Index to partition at
         size_t partition_index = line.max_h > -line.min_h ? line.max_hi : line.min_hi;
 
         // Point to split at
         cv::Point mid = points[partition_index];
+        //if (mid.x == 0 && mid.y == 0)
+         //   std::cout << "PROBLEM!!" << std::endl;
 
         // Create two new lines
         int old_line_id = line.line_id;
@@ -544,9 +547,22 @@ void segment_lines_helper(int line_id, std::vector< cv::Point >& points, int ptS
 
         // Recurse
         segment_lines_helper(old_line_id, points, ptSt, partition_index+1,
-                             lines, verts, HEIGHT_THRESHOLD, TOO_SHORT_THRESHOLD);
+                             lines, verts, new_chains, HEIGHT_THRESHOLD, TOO_SHORT_THRESHOLD);
         segment_lines_helper(new_line_id, points, partition_index,  ptEnd,
-                             lines, verts, HEIGHT_THRESHOLD, TOO_SHORT_THRESHOLD);
+                             lines, verts, new_chains, HEIGHT_THRESHOLD, TOO_SHORT_THRESHOLD);
+    }
+
+    else {
+        // We are done with this line...
+        // note, this happens in order of line id... (how convenient)
+        // add a copy of this pixel chain to our output list.
+        std::vector<cv::Point> chainCopy;
+        for (int i = ptSt; i < ptEnd && i < (int)points.size(); ++i) {
+            cv::Point a {points[i].x, points[i].y};
+            chainCopy.push_back(a);
+        }
+        new_chains.push_back(chainCopy);
+
     }
 
 }
@@ -557,12 +573,13 @@ void segment_lines_helper(int line_id, std::vector< cv::Point >& points, int ptS
 // height threshold says when to create a corner point
 // length threshold says when to stop segmenting
 // chain start says how many pixels past the branch point to ignore (deals with "Curl")
-void segment_lines(std::vector<std::vector<cv::Point>> chains,
+void segment_lines(std::vector<std::vector<cv::Point>>& chains, std::vector<std::vector<cv::Point>>& new_chains,
                    std::vector<MyLine>& lines, std::vector<MyVertex>& verts,
                    int height_threshold, int length_threshold, int chain_start)
 {
     size_t vert_id = 0;
     size_t branchpt_cnt = 0;
+    new_chains = std::vector<std::vector<cv::Point>>();
 
     // Here, we will detect all of the unique branch points
     // and end points, creating a vertex for each one.
@@ -630,8 +647,17 @@ void segment_lines(std::vector<std::vector<cv::Point>> chains,
             }
         }
 
+        //std::pair<cv::Point, cv::Point> endpts = line.endpoints();
+        //if ( (endpts.first.x < 10 && endpts.first.y < 10) ||  (endpts.second.x < 10 && endpts.second.y < 10)) {
+        //    std::cout << endpts.first << " " << endpts.second << " " << line_id << std::endl;
+         //   for (cv::Point pt: chains[i]) {
+         //       std::cout << pt << ", ";
+         //   }
+         //   std::cout << std::endl;
+        //}
+
         // recursively detect corner points
-        segment_lines_helper(line.line_id, chains[i], chain_start1, chain_start2+1, lines, verts, height_threshold, length_threshold);
+        segment_lines_helper(line.line_id, chains[i], chain_start1, chain_start2+1, lines, verts, new_chains, height_threshold, length_threshold);
 
     }
 

@@ -97,8 +97,12 @@ std::vector< std::vector<cv::Point>> connectedComponentsSkel(cv::Mat& skel, cv::
     // Create a pixel idx list for each connected component
     std::vector< std::vector<cv::Point>> points_list;
 
+    cv::Mat critPtMat = cv::Mat::zeros(skel.size(), CV_32SC1);
     std::vector<cv::Point> critical_points;
+    std::vector<cv::Point> adj_branch_points; // branch point adjacent to critical point
+    std::vector<cv::Point> adj_branch1_points; // any point between branch point/critical point
     int VISITED = 254; // We will slightly modify skel
+    int CRITICAL = 253; // We will slightly modify skel
 
     // Mark the critical points using the branch points
     // A critical point is the endpoint of any individual
@@ -111,7 +115,7 @@ std::vector< std::vector<cv::Point>> connectedComponentsSkel(cv::Mat& skel, cv::
             if (pix1 > 0) {
 
                 // Consider a small radius around the branch point
-                const int rad = 2;
+                const int rad = 2; // don't change this...
                 for (int rr = r-rad; rr <= r+rad; ++rr) {
                     for (int cc = c-rad; cc <= c+rad; ++cc) {
 
@@ -127,9 +131,28 @@ std::vector< std::vector<cv::Point>> connectedComponentsSkel(cv::Mat& skel, cv::
                             continue;
                         }
 
-                        if (pix > 0) { // Otherwise, it is a critical point
+                        if (pix > 0 && pix != VISITED) { // Otherwise, it is a critical point
                             cv::Point pt {cc, rr};
-                            critical_points.push_back(pt);
+                            cv::Point ptb {c, r};
+                            cv::Point ptb1;
+                            for (int rrr = r-1; rrr <= r+1; ++rrr) {
+                                for (int ccc = c-1; ccc <= c+1; ++ccc) {
+                                    if (!pixelInBounds(rrr, ccc, skel))
+                                        continue; // pixel out of bounds
+                                    if (std::abs(rrr-rr) <= 1 && std::abs(ccc-cc) <= 1) {
+                                        cv::Point ptb1c = cv::Point{ccc,rrr};
+                                        if (skel.at<pixel_t>(ptb1c) > 0)
+                                            ptb1 = ptb1c;
+                                    }
+                                }
+                            }
+                            if (ptb1.x > 0 || ptb1.y > 0) {
+                                critPtMat.at<int>(pt) = (int)(critical_points.size() + 1);
+                                critical_points.push_back(pt);
+                                adj_branch_points.push_back(ptb);
+                                adj_branch1_points.push_back(ptb1);
+                                skel.at<pixel_t>(rr, cc) = CRITICAL;
+                            }
                         }
                     }
                 }
@@ -140,13 +163,20 @@ std::vector< std::vector<cv::Point>> connectedComponentsSkel(cv::Mat& skel, cv::
 
     // Now, for each critical point, we launch a breadth first search
     // to find every other pixel in this branch, in order of closeness.
+    size_t k = critical_points.size();
+
     for (size_t i = 0; i < critical_points.size(); ++i) {
         pixel_t pix1 = skel.at<pixel_t>(critical_points[i]);
         if (pix1 > 0 && pix1 != VISITED) {
 
             std::vector<cv::Point> points;
+            points.push_back(adj_branch_points[i]);
+            points.push_back(adj_branch1_points[i]);
             std::queue<cv::Point> bfs;
             bfs.push(critical_points[i]);
+
+            bool stillAdding = true;
+            int iter = 0;
 
             while (!bfs.empty()) {
 
@@ -161,8 +191,23 @@ std::vector< std::vector<cv::Point>> connectedComponentsSkel(cv::Mat& skel, cv::
                     continue; // Already visited
                 }
 
+                if (iter > 0 && pix == CRITICAL) {
+                    // we found another critical point. Terminate here
+                    int crit_idx = critPtMat.at<int>(pt) - 1;
+                    if (crit_idx > -1) {
+                        if (adj_branch_points[crit_idx] != adj_branch_points[i] || iter > 5) {
+                            points.push_back(pt);
+                            points.push_back(adj_branch1_points[crit_idx]);
+                            points.push_back(adj_branch_points[crit_idx]);
+                            stillAdding = false;
+                        }
+                    }
+
+                }
                 skel.at<pixel_t>(pt) = VISITED;
-                points.push_back(pt);
+                if (stillAdding) {
+                    points.push_back(pt);
+                }
 
                 // Now, search the neighbors
                 bfs.push(cv::Point {pt.x+1, pt.y+0} );
@@ -173,13 +218,199 @@ std::vector< std::vector<cv::Point>> connectedComponentsSkel(cv::Mat& skel, cv::
                 bfs.push(cv::Point {pt.x+1, pt.y-1} );
                 bfs.push(cv::Point {pt.x-1, pt.y+1} );
                 bfs.push(cv::Point {pt.x-1, pt.y-1} );
+
+                iter++;
             }
 
             points_list.push_back(points);
         }
     }
 
+    // Now we have to deal with unvisited branches. These
+    // are missed due to loops.
+    for (int r = 0; r < skel.rows; ++r) {
+        for (int c = 0; c < skel.cols; ++c) {
+
+            // Consider every branch/end point
+            pixel_t pix1 = skel.at<pixel_t>(r, c);
+            if (pix1 == 0 || pix1 == VISITED)
+                continue;
+
+            // Consider a small radius around the branch point
+            const int rad = 2; // don't change this...
+            for (int rr = r-rad; rr <= r+rad; ++rr) {
+                    for (int cc = c-rad; cc <= c+rad; ++cc) {
+
+                        if (!pixelInBounds(rr, cc, skel))
+                            continue; // pixel out of bounds
+
+                        pixel_t pix = skel.at<pixel_t>(rr, cc);
+
+                        // If the skeleton point is too close to the branch point,
+                        // mark it as visited and continue
+                        if (std::abs(rr-r) <= rad-1 && std::abs(cc-c) <= rad-1) {
+                            skel.at<pixel_t>(rr, cc) = VISITED;
+                            continue;
+                        }
+
+                        if (pix > 0 && pix != VISITED) { // Otherwise, it is a critical point
+                            cv::Point pt {cc, rr};
+                            cv::Point ptb {c, r};
+                            cv::Point ptb1;
+                            for (int rrr = r-1; rrr <= r+1; ++rrr) {
+                                for (int ccc = c-1; ccc <= c+1; ++ccc) {
+                                    if (!pixelInBounds(rrr, ccc, skel))
+                                        continue; // pixel out of bounds
+                                    if (std::abs(rrr-rr) <= 1 && std::abs(ccc-cc) <= 1) {
+                                        cv::Point ptb1c = cv::Point{ccc,rrr};
+                                        if (skel.at<pixel_t>(ptb1c) > 0)
+                                            ptb1 = ptb1c;
+                                    }
+                                }
+                            }
+                            if (ptb1.x>0 || ptb1.y > 0) {
+                                critPtMat.at<int>(pt) = (int)(critical_points.size() + 1);
+                                critical_points.push_back(pt);
+                                adj_branch_points.push_back(ptb);
+                                adj_branch1_points.push_back(ptb1);
+                                skel.at<pixel_t>(rr, cc) = CRITICAL;
+                            }
+                        }
+                    }
+            }
+
+
+          for (; k < critical_points.size(); ++k) {
+            std::vector<cv::Point> points;
+            points.push_back(adj_branch_points[k]);
+            points.push_back(adj_branch1_points[k]);
+            std::queue<cv::Point> bfs;
+            bfs.push(critical_points[k]);
+
+            bool stillAdding = true;
+            int iter = 0;
+
+            while (!bfs.empty()) {
+
+                cv::Point pt = bfs.front();
+                bfs.pop();
+
+                if (!pixelInBounds(pt, skel))
+                    continue; // OOB
+
+                pixel_t pix = skel.at<pixel_t>(pt);
+                if (pix == 0 || pix == VISITED) {
+                    continue; // Already visited
+                }
+
+                if (iter > 0 && pix == CRITICAL) {
+                    // we found another critical point. Terminate here
+                    int crit_idx = critPtMat.at<int>(pt) - 1;
+                    if (crit_idx > -1) {
+                        if (adj_branch_points[crit_idx] != adj_branch_points[k] || iter > 5) {
+                            points.push_back(pt);
+                            points.push_back(adj_branch1_points[crit_idx]);
+                            points.push_back(adj_branch_points[crit_idx]);
+                            stillAdding = false;
+                        }
+                    }
+
+                }
+                skel.at<pixel_t>(pt) = VISITED;
+                if (stillAdding) {
+                    points.push_back(pt);
+                }
+
+                // Now, search the neighbors
+                bfs.push(cv::Point {pt.x+1, pt.y+0} );
+                bfs.push(cv::Point {pt.x-1, pt.y+0} );
+                bfs.push(cv::Point {pt.x+0, pt.y+1} );
+                bfs.push(cv::Point {pt.x+0, pt.y-1} );
+                bfs.push(cv::Point {pt.x+1, pt.y+1} );
+                bfs.push(cv::Point {pt.x+1, pt.y-1} );
+                bfs.push(cv::Point {pt.x-1, pt.y+1} );
+                bfs.push(cv::Point {pt.x-1, pt.y-1} );
+
+                iter++;
+            }
+
+            points_list.push_back(points);
+          }
+
+
+        }
+    }
+
+    skel = skel > 0;
     return points_list;
+
+}
+
+// This takes in a binary image, list of pixel chains, and a search limit
+// and then runs a bfs to determine which pixels are owned by each chain
+void pixel_chain_owners(cv::Mat& img, std::vector<std::vector<cv::Point>>& pixel_chains, std::vector<std::vector<cv::Point>>& pixels_owned, int maxIter) {
+
+    int VISITED = 252;
+    int iter = 0;
+
+    std::queue<cv::Point> bfsPt;
+    std::queue<int> bfsID;
+    bfsPt.push(cv::Point{-1,-1});
+    bfsID.push(-1);
+
+    for (size_t i = 0; i < pixel_chains.size(); ++i) {
+        std::vector<cv::Point> x{};
+        pixels_owned.push_back(x);
+        for (size_t j = 0; j < pixel_chains[i].size(); ++j) {
+            bfsPt.push(pixel_chains[i][j]);
+            bfsID.push((int)i);
+            //std::cout << pixel_chains[i][j] << " " << i << std::endl;
+        }
+    }
+
+    while(iter < maxIter && !bfsPt.empty()) {
+
+        cv::Point pt = bfsPt.front();
+        int id = bfsID.front();
+        bfsPt.pop();
+        bfsID.pop();
+
+        //std::cout << pt << " " << id << std::endl;
+
+        if (id == -1) {
+            iter++;
+            bfsPt.push(cv::Point{-1,-1});
+            bfsID.push(-1);
+            continue;
+        }
+
+        pixel_t pix = img.at<pixel_t>(pt);
+        if (pix < 255) {
+            continue;
+        }
+
+        img.at<pixel_t>(pt) = VISITED;
+        pixels_owned[id].push_back(pt);
+
+        bfsPt.push(cv::Point {pt.x+1, pt.y+0} );
+        bfsPt.push(cv::Point {pt.x-1, pt.y+0} );
+        bfsPt.push(cv::Point {pt.x+0, pt.y+1} );
+        bfsPt.push(cv::Point {pt.x+0, pt.y-1} );
+        bfsPt.push(cv::Point {pt.x+1, pt.y+1} );
+        bfsPt.push(cv::Point {pt.x+1, pt.y-1} );
+        bfsPt.push(cv::Point {pt.x-1, pt.y+1} );
+        bfsPt.push(cv::Point {pt.x-1, pt.y-1} );
+        bfsID.push(id);
+        bfsID.push(id);
+        bfsID.push(id);
+        bfsID.push(id);
+        bfsID.push(id);
+        bfsID.push(id);
+        bfsID.push(id);
+        bfsID.push(id);
+    }
+
+    img = img > 0;
 
 }
 

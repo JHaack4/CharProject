@@ -967,7 +967,8 @@ void run_word_project()
 
             std::vector<MyLine> smVecLines;
             std::vector<MyVertex> smVecVerts;
-            segment_lines(line_chains, smVecLines, smVecVerts, /*ht*/3, /*len*/3, /*curl*/0);
+            std::vector<std::vector<cv::Point>> new_chains2;
+            segment_lines(line_chains, new_chains2, smVecLines, smVecVerts, /*ht*/3, /*len*/3, /*curl*/0);
 
             for (size_t j = 0; j < smVecLines.size(); ++j) {
                 MyLine street = smVecLines[j];

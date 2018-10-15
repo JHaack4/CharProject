@@ -38,7 +38,7 @@ void log_time()
     std::tm bt = *std::localtime(&timer);
 
     std::cout << std::put_time(&bt, "%T"); // HH:MM:SS
-    std::cout << "." << std::setfill('0') << std::setw(3) << ms.count();
+    std::cout << "ms" << std::setfill('0') << std::setw(6) << ms.count();
 }
 
 void log(std::string message, LogLevel level)

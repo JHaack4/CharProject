@@ -48,7 +48,7 @@ std::vector<std::vector<cv::Point>> shrink(cv::Mat& filled_streets, float pThr, 
 void draw_chains(const std::vector<std::vector<cv::Point>> chains, cv::Mat& miniChains, cv::Mat& miniBranchPoints);
 
 // vectorize.cpp
-void segment_lines(std::vector<std::vector<cv::Point>> chains, std::vector<MyLine>& lines,
+void segment_lines(std::vector<std::vector<cv::Point>>& chains, std::vector<std::vector<cv::Point>>& new_chains, std::vector<MyLine>& lines,
                    std::vector<MyVertex>& verts, int height_threshold, int length_threshold, int chain_start);
 void copyGraph(std::vector<MyLine>& lines_from, std::vector<MyVertex>& verts_from,
                std::vector<MyLine>& lines_to, std::vector<MyVertex>& verts_to );
@@ -90,6 +90,7 @@ int searchForOwner(cv::Point2f p, cv::Mat& ownership);
 float searchForOwnerF(cv::Point2f p, cv::Mat& ownership);
 std::vector<std::vector<cv::Point>> connectedComponentsWithIdx(cv::Mat& img, cv::Mat& labels);
 std::vector<std::vector<cv::Point>> connectedComponentsSkel(cv::Mat& skel, cv::Mat& branchEndPoints);
+void pixel_chain_owners(cv::Mat& img, std::vector<std::vector<cv::Point>>& pixel_chains, std::vector<std::vector<cv::Point>>& pixels_owned, int maxIter);
 double averageXPos(const std::vector<cv::Point>& pixels);
 cv::Mat idxToImg(std::vector<cv::Point>& points, size_t pad);
 cv::Mat idxRotate(std::vector<cv::Point>& points, MyLine& line);
@@ -101,6 +102,7 @@ void texturepack(cv::Mat& pack, cv::Mat& img, MyLine& word, int& lastR, int& las
 void package_bgr(const std::vector<cv::Mat>& layers, cv::Mat& output);
 void color_connected_components(const cv::Mat& input, cv::Mat& output, cv::Vec3b background = cv::Vec3b{0,0,0}, cv::Vec3b rangeMin = cv::Vec3b{50,50,50}, cv::Vec3b rangeMax = cv::Vec3b{255,255,255});
 void color_labels(const cv::Mat& input, cv::Mat& output, cv::Vec3b background = cv::Vec3b{0,0,0}, cv::Vec3b rangeMin = cv::Vec3b{50,50,50}, cv::Vec3b rangeMax = cv::Vec3b{255,255,255});
+void draw_pixel_chains(cv::Mat& imBin, std::vector< std::vector<cv::Point>>& pixelChains, cv::Mat& output);
 cv::Vec3b id_color(int i);
 void debug_imwrite(const cv::Mat& img, const std::string& title);
 void specific_imwrite(const cv::Mat& img, const std::string& type, const std::string& info = "");

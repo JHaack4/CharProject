@@ -300,7 +300,8 @@ void process_image(cv::Mat& imRaw, const std::vector<cv::Point>& boundary, const
     // Vectorize the small lines.
     std::vector<MyLine> smVecLines;
     std::vector<MyVertex> smVecVerts;
-    segment_lines(line_chains, smVecLines, smVecVerts, /*ht*/4, /*len*/2, /*curl*/0);
+    std::vector<std::vector<cv::Point>> new_line_chains;
+    segment_lines(line_chains, new_line_chains, smVecLines, smVecVerts,  /*ht*/4, /*len*/2, /*curl*/0);
     log("Vectorization of small lines", LogLevel::debug);
 
     // Apply long line detection algorithm to the small lines
@@ -390,7 +391,8 @@ void process_image(cv::Mat& imRaw, const std::vector<cv::Point>& boundary, const
     // Vectorize the streets
     std::vector<MyLine> miniStreetLines;
     std::vector<MyVertex> miniStreetVerts;
-    segment_lines(chains, miniStreetLines, miniStreetVerts, 4, 7, 3);
+    std::vector<std::vector<cv::Point>> new_chains;
+    segment_lines(chains, new_chains, miniStreetLines, miniStreetVerts, 4, 7, 3);
 
     // Fill in info about the streets
     int street_segment_id = 0;
