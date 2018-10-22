@@ -63,12 +63,27 @@ void draw_pixel_chains(cv::Mat& imBin, std::vector< std::vector<cv::Point>>& pix
     }
 }
 
+std::vector<cv::Vec3b> random_colors2;
+
 // Give a deterministic color to each integer.
 cv::Vec3b id_color(int i) {
-    int b = (57 * i * i + 88)% 256;
-    int g = (98 * i * i * i + 199) % 256;
-    int r = (43 * i + 117 * i * i + 44) % 256;
-    return cv::Vec3b(b,g,r);
+
+    if (random_colors2.size() < 1) {
+        srand(31);
+        std::vector<cv::Vec3b> random_colors;
+        for (size_t ii = 0; ii < 1000; ++ii) {
+            pixel_t b = rand() % (255 - 50 + 1) + 50;
+            pixel_t g = rand() % (255 - 50 + 1) + 50;
+            pixel_t r = rand() % (255 - 50 + 1) + 50;
+            if (ii == 0) {
+                random_colors2.push_back({50,50,50});
+            }
+            else {
+                random_colors2.push_back(cv::Vec3b(b,g,r));
+            }
+        }
+    }
+    return random_colors2[i%1000];
 }
 
 // Creates a colored label image

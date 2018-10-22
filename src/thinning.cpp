@@ -536,7 +536,7 @@ void thinning4(const cv::Mat& src, cv::Mat& dst, cv::Mat& branch_points, bool sk
         thinningIteration4(dst, 0, skel, loopAgain1,  nextWhiteX, nextWhiteY, firstWhiteX, firstWhiteY, firstRun);
         firstRun = false;
         --max_iter;
-        std::cout << "here4" << std::endl;
+        //std::cout << "here4" << std::endl;
     }
     while (loopAgain1 && max_iter > 0);
 

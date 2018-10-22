@@ -88,6 +88,27 @@ float match_segments_score(LongLine& l1, MyLine& m1, LongLine& l2, MyLine& m2, M
         return (score > -1.1 ? 1e10 : score);
     }
 
+    if (matching_algorithm == MATCH_VECCHARS) {
+        // Matching for turning vectorized line segments into long lines for a char
+
+        // Get endpoint vectors
+        cv::Point p1 = m1.endpointVector(v.loc_);
+        cv::Point p2 = m2.endpointVector(v.loc_);
+        cv::Point pl1 = l1.endpointVector(v.loc_);
+        cv::Point pl2 = l2.endpointVector(v.loc_);
+
+        // Want dot product to be near -1, since that means they are
+        // parallel and point in the opposite direction. Dot product is a proxy for
+        // angle between vectors
+        float dotP = (p1.x * p2.x + p1.y * p2.y) / (cv::norm(p1) * cv::norm(p2));
+        float dotLP = (pl1.x * pl2.x + pl1.y * pl2.y) / (cv::norm(pl1) * cv::norm(pl2));
+
+        // The lines and long lines are required to be within 30 degrees of
+        // each other, and point in the opposite direction.
+        float score = (dotP > -0.80 ? 1e10 : dotP) + (dotLP > -0.8 ? 1e10: dotLP * 0.5);
+        return (score > -1.1 ? 1e10 : score);
+    }
+
     if (matching_algorithm == MATCH_EXTENDED_STREETS) {
         // Used to combine historical street segments into extended historical streets
 
@@ -135,7 +156,7 @@ float match_segments_gap_score(LongLine& l1, MyLine& m1, LongLine& l2, MyLine& m
         return cv::norm(v1.loc_ - v2.loc_);
     }
 
-    if (matching_algorithm == MATCH_VECLINES) {
+    if (matching_algorithm == MATCH_VECLINES || matching_algorithm == MATCH_VECCHARS) {
         // Matching function for turning the vectorized lines into long lines
 
         // Obtain vectors for the lines and their corresponding long lines

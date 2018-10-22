@@ -13,13 +13,25 @@
 #include "image_proc.h"
 #include "opencv2/opencv.hpp"
 
+
+
 int main(int argc, char* argv[]) {
 
     log("Running...", LogLevel::debug);
 
     // Change this if you want to do something else
     std::string path_to_main_directory = "C:\\Users\\Jordan Haack\\Desktop\\CharProject2";
-    NAME = "00065u";
+    //NAME = "00065u";
+    NAME = "00017u-1951-Reel_24-V.1-LOC-36029-Buffalo-NY_w1093_c0_A";
+
+    DRAW_DEBUG_IMAGES = true;
+    std::string ots = "output";
+    std::string datas = "data";
+    std::string let = "letter";
+    std::string rlet = "representative_letters";
+    std::string avg = "average_";
+    DEBUG_PATH = path_to_main_directory + PATH_SEP + ots;
+    make_dir(DEBUG_PATH, "!RotatedChars!");
 
     if (argc > 1) {
         path_to_main_directory = argv[1];
@@ -27,6 +39,94 @@ int main(int argc, char* argv[]) {
     if (argc > 2) {
         NAME = argv[2];
     }
+
+    // mask to use for creating the spectrum
+    //std::vector<float> mask = {1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1};
+    std::vector<float> mask = {1,1,1,1,1,2,2,2,2,2,5,5,5,5,5,5,5,5,5,5,5,2,2,2,2,2,1,1,1,1,1};
+    bool useAverages = true;
+
+
+
+
+    std::vector<spectrum_t> represetative_spectrum;
+
+    // generate the set of representatives
+    for (int i = 0; i < 26; ++i) {
+        char ch = (char)(i + 'A');
+        std::string path_to_char = path_to_main_directory + PATH_SEP + datas + PATH_SEP + rlet + PATH_SEP + avg + ch + ".png";
+
+        cv::Mat raw_img = cv::imread(path_to_char, CV_LOAD_IMAGE_GRAYSCALE);
+        cv::Mat imBin;
+        raw_img = raw_img < 220;
+        binarize(raw_img, imBin);
+
+        spectrum_t spec;
+        char_to_spectrum(imBin, spec, mask, useAverages);
+        represetative_spectrum.push_back(spec);
+    }
+
+    std::vector<int> anglesPos = {0,5,30};
+    for (int angle: anglesPos)
+    for (int i = 0; i < 26; ++i) {
+        char ch = (char)(i + 'A');
+        std::string path_to_char = path_to_main_directory + PATH_SEP + datas + PATH_SEP + rlet + PATH_SEP + avg + ch + ".png";
+
+        cv::Mat raw_img = cv::imread(path_to_char, CV_LOAD_IMAGE_GRAYSCALE);
+        cv::Mat imBin;
+        raw_img = raw_img < 220;
+        binarize(raw_img, imBin);
+        cv::Mat imRot;
+        //int angle = 0;
+        cv_rotate(imBin, imRot, angle);
+        std::string strch(1,ch);
+        specific_imwrite(imRot, "!RotatedChars!", "_" +strch+std::to_string(angle));
+
+        spectrum_t spec;
+        char_to_spectrum(imRot, spec, mask, useAverages);
+
+        if (DRAW_DEBUG_IMAGES) {
+            int imgSize = 200;
+            cv::Mat wheel_img_base = cv::Mat::zeros(cv::Size{2*imgSize-1,2*imgSize-1}, CV_8UC1);
+            cv::Mat spec_img;
+            package_bgr({wheel_img_base,wheel_img_base,wheel_img_base}, spec_img);
+            cv::circle(spec_img, cv::Point{imgSize,imgSize}, imgSize-2, CV_RGB(255,255,255), 2);
+            cv::circle(spec_img, cv::Point{imgSize,imgSize}, 1, CV_RGB(255,255,255), 2);
+            for (int ii = 0; ii < 180; ii++) {
+                float angles = ii / 180.0f * 3.14159f;
+                cv::Point2f pt {cos(angles), sin(angles)};
+                cv::line(spec_img, cv::Point{(int)(imgSize - imgSize*pt.x), (int)(imgSize - imgSize*pt.y)},
+                    cv::Point{(int)(imgSize + imgSize*pt.x), (int)(imgSize + imgSize*pt.y)},
+                    CV_RGB(std::min<int>(255, (int)(255*50*spec[ii])), 0, 0), 1);
+            }
+            specific_imwrite(spec_img, "!RotatedChars!", "_" +strch+std::to_string(angle)+"_s");
+        }
+
+        int bestRep;
+        int bestAngle;
+        find_best_representative_spectrum(represetative_spectrum, spec, bestRep, bestAngle);
+        std::cout << (char)('A'+bestRep) << " angle=" << bestAngle << " best rep for " << ch << "/" << angle << std::endl;
+    }
+
+
+
+
+    // If you want to analyze the representative chars
+    /*for (int i = 0; i < 26; ++i) {
+        char ch = (char)(i + 'A');
+        std::string avg2 = "average_";
+        NAME = avg2 + ch;
+
+        std::string path_to_map = path_to_main_directory + PATH_SEP + datas + PATH_SEP + rlet + PATH_SEP + NAME + ".png";
+        look_at_char(path_to_map);
+    }*/
+
+//    // if you want to analyze a single char...
+//    look_at_char(path_to_main_directory);
+
+
+    if (1>0) return 0;
+
+// ---------------------------------------------------------------------------------------
 
     DRAW_DEBUG_IMAGES = true;
     std::string o = "output";

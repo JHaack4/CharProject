@@ -28,6 +28,7 @@ CodeblocksProj/
 Debug
 Midway
 Output
+letter/*
 config.ini
 *~
 *.pdf

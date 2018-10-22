@@ -7,6 +7,7 @@
 #include "opencv2/opencv.hpp"
 
 typedef unsigned char pixel_t;
+typedef std::vector<float> spectrum_t;
 
 // global variables
 extern std::string MIDWAY_PATH;    // files needed for OCR and matching
@@ -82,6 +83,7 @@ void fill_holes(cv::Mat& img, int area_threshold);
 
 // image_util.cpp
 cv::Mat my_rotate(cv::Mat& img, MyLine& line);
+void cv_rotate(cv::Mat& src, cv::Mat& dst, double angle);
 cv::Mat my_deskew(cv::Mat& img, double skew);
 bool pixelInBounds(cv::Point p, cv::Mat& m);
 bool pixelInBounds(int r, int c, cv::Mat& m);
@@ -143,6 +145,16 @@ void thinning7(const cv::Mat& src, cv::Mat& dst, cv::Mat& branch_points, bool sk
 bool checkIfConnectedComponentsWorks(cv::Mat& img, MyLine& word);
 
 
+// gu chars
+void look_at_char(std::string path_to_main_directory);
+void char_to_spectrum(cv::Mat& imBin, std::vector<float>& spectrum, std::vector<float>& mask, bool useAverages);
+float align_spectrum(std::vector<float>& spectrum1, std::vector<float>& spectrum2, int& outAngle);
+float score_spectrum(std::vector<float>& spectrum1, int angle1, std::vector<float>& spectrum2, int angle2);
+void wheel_to_spectrum(std::vector<cv::Point2f>& wheel, std::vector<float>& spectrum, std::vector<float>& mask);
+void find_best_representative_spectrum(std::vector<spectrum_t>& representatives, spectrum_t spectrum, int& outRep, int& outAngle);
+
+
+
 // Matching codes
 #define MATCH_ALL 0
 #define MATCH_DOTPRODUCT 1
@@ -151,6 +163,7 @@ bool checkIfConnectedComponentsWorks(cv::Mat& img, MyLine& word);
 #define MATCH_VECLINES 4
 #define MATCH_CHARS 5
 #define MATCH_EXTENDED_STREETS 6
+#define MATCH_VECCHARS 4
 
 // This class is used as the vertices for a graph, where the
 // edges are MyLine objects and the vertices are MyVertex objects.
@@ -525,6 +538,14 @@ public:
         cv::Point p2 = endpt2 - p;
         if (cv::norm(p1) > cv::norm(p2)) return p1;
         return p2;
+    }
+
+    cv::Point2f unitDirVector() const {
+        cv::Point2f pt = (endpt2-endpt1);
+        if (pt == cv::Point2f{0,0})
+            return cv::Point2f{1,0};
+        pt = pt / ((float)cv::norm(pt));
+        return pt;
     }
 
     cv::Point normVector() const {
