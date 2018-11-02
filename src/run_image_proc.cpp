@@ -166,6 +166,14 @@ int main(int argc, char* argv[]) {
         std::cout << attempts[i] << ", ";
     }
     std::cout << std::endl;
+    for (int i = 0; i < 26; i++) {
+        std::cout << meanAngleDiffs[i] << ", ";
+    }
+    std::cout << std::endl;
+    for (int i = 0; i < 26; i++) {
+        std::cout << meanAngleDiffs180[i] << ", ";
+    }
+    std::cout << std::endl;
     /*
     for (int angle: anglesPos)
     for (int i = 0; i < 26; ++i) {
