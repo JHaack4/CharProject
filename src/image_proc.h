@@ -152,6 +152,7 @@ float align_spectrum(std::vector<float>& spectrum1, std::vector<float>& spectrum
 float score_spectrum(std::vector<float>& spectrum1, int angle1, std::vector<float>& spectrum2, int angle2);
 void wheel_to_spectrum(std::vector<cv::Point2f>& wheel, std::vector<float>& spectrum, std::vector<float>& mask);
 void find_best_representative_spectrum(std::vector<spectrum_t>& representatives, spectrum_t spectrum, int& outRep, int& outAngle);
+void find_best_representative_spectrum2(std::vector<std::vector<spectrum_t>>& representatives, spectrum_t spectrum, int& outRep, int& outAngle);
 
 
 

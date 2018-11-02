@@ -105,7 +105,7 @@ float match_segments_score(LongLine& l1, MyLine& m1, LongLine& l2, MyLine& m2, M
 
         // The lines and long lines are required to be within 30 degrees of
         // each other, and point in the opposite direction.
-        float score = (dotP > -0.80 ? 1e10 : dotP) + (dotLP > -0.8 ? 1e10: dotLP * 0.5);
+        float score = (dotP > -0.73 ? 1e10 : dotP) + (dotLP > -0.8 ? 1e10: dotLP * 0.5);
         return (score > -1.1 ? 1e10 : score);
     }
 

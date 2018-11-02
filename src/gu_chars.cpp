@@ -14,6 +14,30 @@
 #include "image_proc.h"
 #include "opencv2/opencv.hpp"
 
+void find_best_representative_spectrum2(std::vector<std::vector<spectrum_t>>& representatives, spectrum_t spectrum, int& outRep, int& outAngle) {
+
+    float bestScore = 0;
+    int bestRepIndex = 0;
+    int bestAngle = 0;
+
+    for (size_t j = 0; j < representatives.size(); j++) {
+        for (size_t angle = 0; angle < representatives[j].size(); ++angle) {
+            spectrum_t repSpec = representatives[j][angle];
+
+            float s = score_spectrum(spectrum, 0, repSpec, 0);
+            if (s > bestScore) {
+                bestScore = s;
+                bestRepIndex = j;
+                bestAngle = angle;
+            }
+        }
+    }
+
+    outRep = bestRepIndex;
+    outAngle = bestAngle;
+
+}
+
 void find_best_representative_spectrum(std::vector<spectrum_t>& representatives, spectrum_t spectrum, int& outRep, int& outAngle) {
 
     float bestScore = 0;
@@ -44,8 +68,8 @@ float score_spectrum(std::vector<float>& spectrum1, int angle1, std::vector<floa
     float score = 0;
 
     for (int i = 0; i < 180; i++) {
-        //score += sqrt(spectrum1[(i+angle1)%180] * spectrum2[(i+angle2)%180]);
-        score += 1 - std::abs(spectrum1[(i+angle1)%180] - spectrum2[(i+angle2)%180]);
+        score += sqrt(spectrum1[(i+angle1)%180] * spectrum2[(i+angle2)%180]);
+        //score += 1 - std::abs(spectrum1[(i+angle1)%180] - spectrum2[(i+angle2)%180]);
     }
 
     return score;
@@ -125,7 +149,24 @@ void pixel_chains_to_wheel(std::vector<std::vector<cv::Point>>& pixel_chains, st
                 continue;
             }
 
-            cv::Point2f unit = targetPoint - curSpot;
+            std::vector<float> mults {15,10,7,5,3,3,2,2,1,1,1};
+
+            cv::Point2f targetPointAlt{0.0,0.0};
+
+            int sumMults = 0;
+            for (size_t i = target_idx; i < chain.size() && i < target_idx + mults.size()-1; ++i) {
+                int distd = (i-target_idx);
+                sumMults+= mults[distd];
+            }
+            for (size_t i = target_idx; i < chain.size() && i < target_idx + mults.size()-1; ++i) {
+                int distd = (i-target_idx);
+                cv::Point2f a = chain[i];
+                a *= mults[distd]/sumMults;
+                targetPointAlt = targetPointAlt + a;
+            }
+
+
+            cv::Point2f unit = targetPointAlt - curSpot;
             if (cv::norm(unit) == 0) {
                 std::cout << "error, zero dist??" << std::endl;
                 return;
@@ -300,9 +341,26 @@ void look_at_char(std::string path_to_map) {
 
     // Find the wheel thing
     std::vector<cv::Point2f> wheel;
-    pixel_chains_to_wheel(vecPixelChains, wheel, 1.9f, false);
+    pixel_chains_to_wheel(vecPixelChains, wheel, 1.0f, false);
     std::vector<cv::Point2f> wheelLL;
-    pixel_chains_to_wheel(vecPixelChains, wheelLL, 1.9f, true);
+    //pixel_chains_to_wheel(vecPixelChains, wheelLL, 1.9f, true);
+    {
+        std::vector<LongLine> vecLongLines;
+        generate_long_lines(vecLines, vecLongLines);
+        combine_long_lines(vecLines, vecVerts, vecLongLines, imBin,
+                        /*vert*/ 2, /*dist*/ 1, /*matching_algorithm*/ MATCH_VECCHARS);
+
+        for (size_t i = 0; i < vecLines.size(); ++i) {
+            MyLine l = vecLines[i];
+            LongLine ll = vecLongLines[l.long_line];
+            cv::Point2f dir = ll.unitDirVector();
+
+            for (int j = 0; j < l.width_ + 1; j++){
+                wheelLL.push_back(dir);
+            }
+        }
+
+    }
 
     // debug image for the wheel
     int imgSize = 200;

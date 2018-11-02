@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
     // Change this if you want to do something else
     std::string path_to_main_directory = "C:\\Users\\Jordan Haack\\Desktop\\CharProject2";
     //NAME = "00065u";
-    NAME = "00017u-1951-Reel_24-V.1-LOC-36029-Buffalo-NY_w1093_c0_A";
+    NAME = "00163u-1986-Reel_4-V.4-UPA-36029-Buffalo-NY_w105_c0_A";
 
     DRAW_DEBUG_IMAGES = true;
     std::string ots = "output";
@@ -40,6 +40,11 @@ int main(int argc, char* argv[]) {
         NAME = argv[2];
     }
 
+    //if you want to analyze a single char...
+    //path_to_main_directory = path_to_main_directory + PATH_SEP + datas + PATH_SEP + let + PATH_SEP + NAME + ".png";
+    //look_at_char(path_to_main_directory);
+    //if(1>0) return 0;
+
     // mask to use for creating the spectrum
     //std::vector<float> mask = {1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1};
     std::vector<float> mask = {1,1,1,1,1,2,2,2,2,2,5,5,5,5,5,5,5,5,5,5,5,2,2,2,2,2,1,1,1,1,1};
@@ -48,10 +53,12 @@ int main(int argc, char* argv[]) {
 
 
 
-    std::vector<spectrum_t> represetative_spectrum;
+    std::vector<std::vector<spectrum_t>> represetative_spectrum;
 
     // generate the set of representatives
     for (int i = 0; i < 26; ++i) {
+        std::vector<spectrum_t> aa;
+      for (int a = 0; a < 360; a++) {
         char ch = (char)(i + 'A');
         std::string path_to_char = path_to_main_directory + PATH_SEP + datas + PATH_SEP + rlet + PATH_SEP + avg + ch + ".png";
 
@@ -60,12 +67,106 @@ int main(int argc, char* argv[]) {
         raw_img = raw_img < 220;
         binarize(raw_img, imBin);
 
+        cv::Mat imRot;
+        cv_rotate(imBin, imRot, a);
+
         spectrum_t spec;
-        char_to_spectrum(imBin, spec, mask, useAverages);
-        represetative_spectrum.push_back(spec);
+        char_to_spectrum(imRot, spec, mask, useAverages);
+        aa.push_back(spec);
+      }
+      represetative_spectrum.push_back(aa);
     }
 
-    std::vector<int> anglesPos = {0,5,30};
+    log("representatives computed...", LogLevel::debug);
+
+
+    std::vector<int> anglesPos = {0,30,60,90,120,150,180,210,240,270,300,330};
+    std::vector<std::string> filePos;
+
+    // Todo populate this...
+    filePos.push_back("00012u-1917-Reel_23-V.6-LOC-36029-Buffalo-NY_w101_c0_A.png");
+    filePos.push_back("00017_1u-1889-Reel_21-V.3-LOC-36029-Buffalo-NY_w144_c5_T.png");
+    filePos.push_back("00017_1u-1889-Reel_21-V.3-LOC-36029-Buffalo-NY_w465_c4_O.png");
+
+
+
+    std::vector<int> corrects;
+    std::vector<int> attempts;
+    std::vector<std::vector<int>> angleDiffs;
+
+    for (int i = 0; i < 26; i++) {
+        corrects.push_back(0);
+        attempts.push_back(0);
+        std::vector<int> aaa;
+        angleDiffs.push_back(aaa);
+    }
+
+
+
+
+    for (int angle: anglesPos) {
+        for (std::string file: filePos) {
+
+            int correct = (file[file.size()-5]) - (int)('A');
+            char ch = (char)(correct+'A');
+            std::string path_to_char = path_to_main_directory + PATH_SEP + datas + PATH_SEP + let + PATH_SEP + file;
+
+            cv::Mat raw_img = cv::imread(path_to_char, CV_LOAD_IMAGE_GRAYSCALE);
+            cv::Mat imBin;
+            raw_img = raw_img < 220;
+            binarize(raw_img, imBin);
+            cv::Mat imRot;
+
+            cv_rotate(imBin, imRot, angle);
+
+            spectrum_t spec;
+            char_to_spectrum(imRot, spec, mask, useAverages);
+
+            int bestRep;
+            int bestAngle;
+            find_best_representative_spectrum2(represetative_spectrum, spec, bestRep, bestAngle);
+            std::cout << (char)('A'+bestRep) << " angle=" << bestAngle << " best rep for " << ch << "/" << angle << std::endl;
+
+            bool isCorrectChar = bestRep == correct;
+            corrects[correct] += isCorrectChar;
+            attempts[correct] += 1;
+
+            int angleDiff = std::abs(angle - bestAngle);
+            angleDiff = std::min<int>(angleDiff, 360-angleDiff);
+
+            angleDiffs[correct].push_back(angleDiff);
+
+        }
+    }
+
+    std::vector<float> meanAngleDiffs;
+    std::vector<float> meanAngleDiffs180;
+    for (int i = 0; i < 26; i++) {
+        std::cout << (char)('A'+i) << ": " << corrects[i] << "/" << attempts[i] << std::endl;
+        float mean = 0;
+        float mean180 = 0;
+
+        for (size_t j = 0; j < angleDiffs[i].size(); j++) {
+            mean += angleDiffs[i][j];
+            mean180 += std::min<int>(angleDiffs[i][j], 180-angleDiffs[i][j]);
+        }
+
+        meanAngleDiffs.push_back((mean/angleDiffs[i].size()));
+        meanAngleDiffs180.push_back((mean180/angleDiffs[i].size()));
+
+        std::cout << "mean angle error " << (mean/angleDiffs[i].size()) << std::endl;
+        std::cout << "mean angle error mod 180 " << (mean180/angleDiffs[i].size()) << std::endl;
+    }
+
+    for (int i = 0; i < 26; i++) {
+        std::cout << corrects[i] << ", ";
+    }
+    std::cout << std::endl;
+    for (int i = 0; i < 26; i++) {
+        std::cout << attempts[i] << ", ";
+    }
+    std::cout << std::endl;
+    /*
     for (int angle: anglesPos)
     for (int i = 0; i < 26; ++i) {
         char ch = (char)(i + 'A');
@@ -79,7 +180,7 @@ int main(int argc, char* argv[]) {
         //int angle = 0;
         cv_rotate(imBin, imRot, angle);
         std::string strch(1,ch);
-        specific_imwrite(imRot, "!RotatedChars!", "_" +strch+std::to_string(angle));
+        //specific_imwrite(imRot, "!RotatedChars!", "_" +strch+std::to_string(angle));
 
         spectrum_t spec;
         char_to_spectrum(imRot, spec, mask, useAverages);
@@ -103,9 +204,9 @@ int main(int argc, char* argv[]) {
 
         int bestRep;
         int bestAngle;
-        find_best_representative_spectrum(represetative_spectrum, spec, bestRep, bestAngle);
+        find_best_representative_spectrum2(represetative_spectrum, spec, bestRep, bestAngle);
         std::cout << (char)('A'+bestRep) << " angle=" << bestAngle << " best rep for " << ch << "/" << angle << std::endl;
-    }
+    } */
 
 
 
@@ -120,8 +221,7 @@ int main(int argc, char* argv[]) {
         look_at_char(path_to_map);
     }*/
 
-//    // if you want to analyze a single char...
-//    look_at_char(path_to_main_directory);
+
 
 
     if (1>0) return 0;
