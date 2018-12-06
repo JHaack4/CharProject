@@ -50,7 +50,7 @@ def tightest_indices(img):
 
 def tightest_crop(img):
     t1,b1,l1,r1 = tightest_indices(img)
-    return img[0:H, max(0,l1-2):min(img.shape[1],r1+3)]
+    return img[0:H, max(0,l1):min(img.shape[1],r1+1)]
 
 
 def overlap_concat(img1, img2, overlap_amt):
@@ -70,9 +70,9 @@ def get_concat(img1, img2, max_over):
 
     for i in range(1, min(len(img1[0]), len(img2[0]))):
         new, overlap = overlap_concat(img1, img2, i)
-        if overlap >= max_over:
+        if overlap >= max_over or i > 12: # max_overlap is capped at 12
             if i == 1:
-                new, _ = overlap_concat(img1, img2, i)
+                new, _ = overlap_concat(img1, img2, 1)
             else:
                 slide_back = random.randrange(1, 10)
                 overlap = max(1, i - slide_back)
@@ -139,7 +139,7 @@ def generate_training_example(training_images, training_labels, full_widths_only
     return (img, chars_list, start_list, stop_list)
 
 for i in range(10):
-    img,char_list,start_list,stop_list = generate_training_example(training_images, letter_keys, True)
+    img,char_list,start_list,stop_list = generate_training_example(training_images, letter_keys, False)
     print(char_list)
     print(start_list)
     print(stop_list)
