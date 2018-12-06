@@ -341,7 +341,7 @@ void look_at_char(std::string path_to_map) {
 
     // Find the wheel thing
     std::vector<cv::Point2f> wheel;
-    pixel_chains_to_wheel(vecPixelChains, wheel, 1.0f, false);
+    pixel_chains_to_wheel(vecPixelChains, wheel, 1.2f, false);
     std::vector<cv::Point2f> wheelLL;
     //pixel_chains_to_wheel(vecPixelChains, wheelLL, 1.9f, true);
     {

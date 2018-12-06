@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
     // Change this if you want to do something else
     std::string path_to_main_directory = "C:\\Users\\Jordan Haack\\Desktop\\CharProject2";
     //NAME = "00065u";
-    NAME = "00163u-1986-Reel_4-V.4-UPA-36029-Buffalo-NY_w105_c0_A";
+    NAME = "00207u-1986-Reel_5-V.11-UPA-36029-Buffalo-NY_w752_c0_S";
 
     DRAW_DEBUG_IMAGES = true;
     std::string ots = "output";
@@ -41,9 +41,19 @@ int main(int argc, char* argv[]) {
     }
 
     //if you want to analyze a single char...
-    //path_to_main_directory = path_to_main_directory + PATH_SEP + datas + PATH_SEP + let + PATH_SEP + NAME + ".png";
-    //look_at_char(path_to_main_directory);
-    //if(1>0) return 0;
+    path_to_main_directory = path_to_main_directory + PATH_SEP + datas + PATH_SEP + let + PATH_SEP + NAME + ".png";
+    look_at_char(path_to_main_directory);
+
+        // If you want to analyze the representative chars
+    /*for (int i = 0; i < 26; ++i) {
+        char ch = (char)(i + 'A');
+        std::string avg2 = "average_";
+        NAME = avg2 + ch;
+
+        std::string path_to_map = path_to_main_directory + PATH_SEP + datas + PATH_SEP + rlet + PATH_SEP + NAME + ".png";
+        look_at_char(path_to_map);
+    }
+    if(1>0) return 0;*/
 
     // mask to use for creating the spectrum
     //std::vector<float> mask = {1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1};
@@ -219,15 +229,7 @@ int main(int argc, char* argv[]) {
 
 
 
-    // If you want to analyze the representative chars
-    /*for (int i = 0; i < 26; ++i) {
-        char ch = (char)(i + 'A');
-        std::string avg2 = "average_";
-        NAME = avg2 + ch;
 
-        std::string path_to_map = path_to_main_directory + PATH_SEP + datas + PATH_SEP + rlet + PATH_SEP + NAME + ".png";
-        look_at_char(path_to_map);
-    }*/
 
 
 
