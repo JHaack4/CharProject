@@ -134,9 +134,11 @@ def generate_training_example(training_images, training_labels, character_set=No
 
 
 def generate_test_example(test_images, test_labels, character_set=None, min_chars=2, max_chars=6,
-                 H=48, full_widths_only=False, pixel_overlap=10, min_spacing=1, max_join=9):
+                 H=48, pixel_overlap=10, min_spacing=1, max_join=9):
 
     chars_list = []
+    char_starts = []
+    char_ends = []
     img = None
     num_chars = random.randint(min_chars, max_chars)
 
@@ -158,10 +160,14 @@ def generate_test_example(test_images, test_labels, character_set=None, min_char
 
         if img is None:
             img = cur_img[0:H, 0:w]
+            char_starts.append(0)
         else: 
             img = tightest_crop(get_concat(img, cur_img, pixel_overlap,
                      max_join=max_join, min_slide_back=min_spacing),H)
+            char_starts.append(img.shape[1]-w)
+        
+        char_ends.append(img.shape[1])
 
     img = tightest_crop(pad_image(img,img.shape[1]+50,H),H)
     _,img = cv2.threshold(img,127,255,cv2.THRESH_BINARY)
-    return (img, chars_list)
+    return (img, chars_list, char_starts, char_ends)

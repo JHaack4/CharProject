@@ -35,7 +35,7 @@ for i in range(10):
 
 
 for i in range(10):
-    img,char_list, = generate_test_example(training_images, 
+    img,char_list,start_list,stop_list = generate_test_example(training_images, 
 					letter_keys, character_set=character_set,
 					H=48, min_chars=2, max_chars=6)
     print(char_list)
