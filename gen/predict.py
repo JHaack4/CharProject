@@ -5,6 +5,7 @@
 import cv2
 from gentraining import *
 import keras.models
+import matplotlib.pyplot as plt
 
 model2 = keras.models.load_model('../model/sanborn_rotnet2.hdf5')
 model3 = keras.models.load_model('../model/sanborn_rotnet3.hdf5')
@@ -51,20 +52,34 @@ for i in range(10):
     cv2.destroyAllWindows()
 """
 
-def predict2(model2, img, x1):
+def newBatch(n):
+    return np.zeros((n, H, W, 1))
+
+def addToBatch(X, i, img, x1, x2):
+    st = int((x2-x1)/2)
+    end = st + x2 - x1
+    X[i,0:H,st:end,0] = np.array(img[0:H,x1:x2,0])
+
+def predict2(model2, img, x1, x2):
     X = np.zeros((1, H, W, 1))
-    X[0,:,:,0] = np.array(img[:,x1:x1+W,0])
+    st = int((72 - (x2 - x1))/2)
+    if st < 0: st = 0
+    end = st + x2 - x1
+    #print("%d %d %d %d " % (st, end, x1, x2))
+    X[0,0:H,st:end,0] = np.array(img[0:H,x1:x2,0])
     answer = model2.predict(X).flatten()
-    answer = [(letters[i-3], round(answer[i],3)) for i in range(3,27)]
+    answer = [(letters[i-3], round(answer[i],3)) for i in range(3,29)]
     answer = sorted(answer, key = lambda x: -x[1])
     return answer # sorted list of (letter, score) tuples
 
 def predict3(model3, img, x1, x2):
     X = np.zeros((1, H, W, 1))
-    img = pad_image(tightest_crop(img[:,x1:x2],H), W, H)
-    X[0,:,:,0] = np.array(img[:,:,0])
+    st = int((72 - (x2 - x1))/2)
+    if st < 0: st = 0
+    end = st + x2 - x1
+    X[0,0:H,st:end,0] = np.array(img[0:H,x1:x2,0])
     answer = model3.predict(X).flatten()
-    answer = [(letters[i-3], round(answer[i],3)) for i in range(3,27)]
+    answer = [(letters[i-3], round(answer[i],3)) for i in range(3,29)]
     answer = sorted(answer, key = lambda x: -x[1])
     return answer # sorted list of (letter, score) tuples
 
@@ -134,7 +149,41 @@ def dynamic(model3, img):
 
 def slidingWindow(model2, img):
     """  """
-    pass
+    
+    w = img.shape[1]
+    stepSize = 8 # how much space between images that are checked?
+    # we require that W/stepSize is an integer.
+
+    # table holds individual letter probs for each slice
+    numSlices = int(w/stepSize) + int(W/stepSize)
+    table = [[0.0 for i in range(26)] for j in range(numSlices)]
+
+    n = 0
+    for x1 in range(-W+20,w-20):
+        if x1/stepSize != int(x1/stepSize):
+            continue
+
+        n += 1
+        x2 = x1 + W
+        idx = int((x1+W)/stepSize)
+        
+        x1 = max(0,x1)
+        x2 = min(w,x2)
+
+        answer = predict2(model2, img, x1, x2)
+        #bestLetter = str(answer[0][0])
+        #bestProb = answer[0][1] / sum([answer[i][1] for i in range(len(answer))])
+        print("--pred for %d %d" % (x1,x2))
+        dictanswer = dict(answer)
+        y = [dictanswer[l] for l in letters ]
+        table[idx][0:26] = y
+
+    for c in range(26):
+        plt.plot(range(n), [table[i][c] for i in range(n)], label=chr(65+c))
+    plt.legend()
+    plt.show()
+
+    return 0
     
 
 
@@ -147,11 +196,15 @@ for i in range(10):
     print(char_starts)
     print(char_ends)
 
+    '''
     conf3, word3, pred_starts, pred_ends = dynamic(model3, img)
     print("model 3: %s %.3f" % (word3, conf3))
     print(pred_starts)
     print(pred_ends)
     print("".join(char_list))
+    '''
+
+    slidingWindow(model2, img)
 
     cv2.imshow('image',img)
     cv2.waitKey(0)
