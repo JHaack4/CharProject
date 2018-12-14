@@ -6,6 +6,8 @@ import cv2
 from gentraining import *
 import keras.models
 import matplotlib.pyplot as plt
+from collections import Counter
+from editdistance import EditDistanceFinder
 
 model2 = keras.models.load_model('../model/sanborn_rotnet2.hdf5')
 model3 = keras.models.load_model('../model/sanborn_rotnet3.hdf5')
@@ -56,9 +58,21 @@ def newBatch(n):
     return np.zeros((n, H, W, 1))
 
 def addToBatch(X, i, img, x1, x2):
-    st = int((x2-x1)/2)
+    st = int((72 - (x2 - x1))/2)
+    if st < 0: st = 0
     end = st + x2 - x1
+    if end > W: end = W
+    if x2 - x1 > W: x2 = x1 + W
     X[i,0:H,st:end,0] = np.array(img[0:H,x1:x2,0])
+
+def predictBatch(X, model):
+    return model.predict(X) 
+
+def predictionRowToAnswerTuples(y):
+    answer = [(letters[i-3], round(y[i],3)) for i in range(3,29)]
+    answer = sorted(answer, key = lambda x: -x[1])
+    return answer
+
 
 def predict2(model2, img, x1, x2):
     X = np.zeros((1, H, W, 1))
@@ -86,6 +100,7 @@ def predict3(model3, img, x1, x2):
 def dynamic(model3, img):
     """ returns (word, confidence, starts, ends) """
     
+    printInfo = False
     w = img.shape[1]
     spacingWindow = 8 # how much freedom is allowed in the spacing?
     stepSize = 8 # how much space between images that are checked?
@@ -95,15 +110,38 @@ def dynamic(model3, img):
     # for the subimage from 0:i
     table = [(-1,"",-1,-1) for i in range(w)]
 
+    batchSize = 0
+    for x2 in range(0,w,stepSize):
+        for x1 in range(max(0,x2-W+1), x2):
+            if x1/stepSize != int(x1/stepSize):
+                continue
+            batchSize += 1
+    X = newBatch(batchSize)
+
+    batchIdx = 0
     for x2 in range(0,w,stepSize):
         for x1 in range(max(0,x2-W+1), x2):
             if x1/stepSize != int(x1/stepSize):
                 continue
 
-            answer = predict3(model3, img, x1, x2+1)
+            addToBatch(X, batchIdx, img, x1, x2+1)
+            
+            batchIdx += 1
+
+    y = predictBatch(X, model3)
+
+    batchIdx = 0
+    for x2 in range(0,w,stepSize):
+        for x1 in range(max(0,x2-W+1), x2):
+            if x1/stepSize != int(x1/stepSize):
+                continue
+
+            answer = predictionRowToAnswerTuples(y[batchIdx])
+            batchIdx += 1
+
             bestLetter = str(answer[0][0])
             bestProb = answer[0][1] / sum([answer[i][1] for i in range(len(answer))])
-            print("--pred for %d %d %s %.3f" % (x1,x2,bestLetter,bestProb))
+            if printInfo: print("--pred for %d %d %s %.3f" % (x1,x2,bestLetter,bestProb))
 
             if x2-x1 > 48 and bestLetter not in 'MW':
                 continue
@@ -136,13 +174,13 @@ def dynamic(model3, img):
                 table[x2] = (bestProb*bestPrevProb, bestPrevString+bestLetter, 
                             bestPrevStarts + [x1], bestPrevEnds + [x2])
         
-        print("%d %.3f %s" % (x2, table[x2][0], table[x2][1]))    
+        if printInfo: print("%d %.3f %s" % (x2, table[x2][0], table[x2][1]))    
 
     answerLoc = w
     while answerLoc/stepSize != int(answerLoc/stepSize) or answerLoc >= len(table):
         answerLoc -= 1
-    print(answerLoc)
-    print(len(table))
+    if printInfo: print(answerLoc)
+    if printInfo: print(len(table))
     return table[answerLoc]
                 
 
@@ -186,26 +224,45 @@ def slidingWindow(model2, img):
     return 0
     
 
+e = EditDistanceFinder()
+cnt = Counter()
+showImages = False
+numCorrect = 0
+sumED = 0
+numPredictions = 2
 
 # test approaches
-for i in range(10):
+for i in range(numPredictions):
     img,char_list,char_starts,char_ends = generate_test_example(
                     training_images, letter_keys, character_set=character_set,
 					H=48, min_chars=2, max_chars=6)
+    true_word = ''.join(char_list)
     print(char_list)
     print(char_starts)
     print(char_ends)
 
-    '''
+    
     conf3, word3, pred_starts, pred_ends = dynamic(model3, img)
     print("model 3: %s %.3f" % (word3, conf3))
     print(pred_starts)
     print(pred_ends)
     print("".join(char_list))
-    '''
 
-    slidingWindow(model2, img)
+    dist,alignment = e.align(word3, true_word)
+    print("edit distance: %d" % dist)
+    sumED += dist
+    for a in alignment:
+        cnt[a] += 1
+ 
+    
 
-    cv2.imshow('image',img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    #slidingWindow(model2, img)
+    if showImages:
+        cv2.imshow('image',img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+for a in cnt.keys():
+    print("%s: %d" % (a, cnt[a]))
+
+print("correct: %d total: %d accuracy: %.3f avgEditDist %.3f" % (numCorrect,numPredictions,float(numCorrect)/numPredictions,float(sumED)/numPredictions))
