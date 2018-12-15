@@ -142,6 +142,8 @@ def dynamic(model3, img):
             bestLetter = str(answer[0][0])
             bestProb = answer[0][1] / sum([answer[i][1] for i in range(len(answer))])
             if printInfo: print("--pred for %d %d %s %.3f" % (x1,x2,bestLetter,bestProb))
+            if bestLetter == 'I':
+                bestProb *= 1.1
 
             if x2-x1 > 48 and bestLetter not in 'MW':
                 continue
@@ -253,6 +255,8 @@ for i in range(numPredictions):
     sumED += dist
     for a in alignment:
         cnt[a] += 1
+    if dist == 0:
+        numCorrect += 1
  
     
 
