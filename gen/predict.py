@@ -100,10 +100,10 @@ def predict3(model3, img, x1, x2):
 def dynamic(model3, img):
     """ returns (word, confidence, starts, ends) """
     
-    printInfo = False
+    printInfo = True
     w = img.shape[1]
     spacingWindow = 8 # how much freedom is allowed in the spacing?
-    stepSize = 8 # how much space between images that are checked?
+    stepSize = 4 # how much space between images that are checked?
     # we require that W/stepSize is an integer.
 
     # DP table holds (score, subword, charStart, charEnd) 
@@ -141,14 +141,23 @@ def dynamic(model3, img):
 
             bestLetter = str(answer[0][0])
             bestProb = answer[0][1] / sum([answer[i][1] for i in range(len(answer))])
-            if printInfo: print("--pred for %d %d %s %.3f" % (x1,x2,bestLetter,bestProb))
-            if bestLetter == 'I':
-                bestProb *= 1.1
+            
+            if x2-x1 <= 16:
+                Iweight = 0
+                for i in range(26):
+                    if answer[i][0] == 'I':
+                        Iweight = answer[i][1]
+                if bestLetter == 'I' or answer[0][1] < 0.5 and Iweight > 0.2:
+                    bestLetter = 'I'
+                    bestProb = 0.97
 
             if x2-x1 > 48 and bestLetter not in 'MW':
                 continue
-            if x2-x1 > 24 and bestLetter in 'I':
+            if x2-x1 > 16 and bestLetter in 'I':
                 continue
+
+            if printInfo: print("--pred for %d %d %s %.3f" % (x1,x2,bestLetter,bestProb))
+            
 
             bestPrevString = ""
             bestPrevProb = -1
@@ -231,7 +240,7 @@ cnt = Counter()
 showImages = False
 numCorrect = 0
 sumED = 0
-numPredictions = 2
+numPredictions = 10
 
 # test approaches
 for i in range(numPredictions):
