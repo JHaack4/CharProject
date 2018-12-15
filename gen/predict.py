@@ -156,7 +156,8 @@ def dynamic(model3, img):
             if x2-x1 > 16 and bestLetter in 'I':
                 continue
 
-            if printInfo: print("--pred for %d %d %s %.3f" % (x1,x2,bestLetter,bestProb))
+            debugst = [answer[i][0] + (" %.2f " % answer[i][1]) for i in range(5) ]
+            if printInfo: print("--pred for %d %d %s %.3f %s" % (x1,x2,bestLetter,bestProb,debugst))
             
 
             bestPrevString = ""
@@ -164,7 +165,7 @@ def dynamic(model3, img):
             bestPrevStarts = []
             bestPrevEnds = []
 
-            for xp in range(max(0, x1-spacingWindow), min(x2, x1+spacingWindow)):
+            for xp in range(max(0, x1-spacingWindow), min(x2, x1+0*spacingWindow)):
                 if xp/stepSize != int(xp/stepSize):
                     continue # ensure evenly divisible by step size
 
@@ -246,7 +247,7 @@ numPredictions = 10
 for i in range(numPredictions):
     img,char_list,char_starts,char_ends = generate_test_example(
                     training_images, letter_keys, character_set=character_set,
-					H=48, min_chars=2, max_chars=6)
+                    H=48, min_chars=2, max_chars=6)
     true_word = ''.join(char_list)
     print(char_list)
     print(char_starts)
@@ -278,4 +279,6 @@ for i in range(numPredictions):
 for a in cnt.keys():
     print("%s: %d" % (a, cnt[a]))
 
-print("correct: %d total: %d accuracy: %.3f avgEditDist %.3f" % (numCorrect,numPredictions,float(numCorrect)/numPredictions,float(sumED)/numPredictions))
+print("correct: %d total: %d accuracy: %.3f avgEditDist %.3f" % (numCorrect,
+    numPredictions,float(numCorrect)/numPredictions,
+    float(sumED)/numPredictions))
