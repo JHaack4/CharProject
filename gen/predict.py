@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 from collections import Counter
 from editdistance import EditDistanceFinder
 
-model2 = keras.models.load_model('../model/sanborn_rotnet2.hdf5')
-model3 = keras.models.load_model('../model/sanborn_rotnet3.hdf5')
+model2 = keras.models.load_model('../OCR/rotation/models3/sanborn_rotnet2.hdf5')
+model3 = keras.models.load_model('../OCR/rotation/models3/sanborn_rotnet3.hdf5')
 print('models loaded')
 
 H = 48
@@ -20,7 +20,7 @@ test_letter_set = 'ABCDEFGHIKLMNOPRSTUVW'
 character_set = set([i for i in test_letter_set])
 
 # load data
-letter_path = "../data/letter/"
+letter_path = "../data/labeled_letters/"
 letter_files = [f for f in listdir(letter_path) if isfile(join(letter_path, f))]
 letter_keys = [f[len(f)-5] for f in letter_files]
 
@@ -100,7 +100,7 @@ def predict3(model3, img, x1, x2):
 def dynamic(model3, img):
     """ returns (word, confidence, starts, ends) """
     
-    printInfo = True
+    printInfo = False
     w = img.shape[1]
     spacingWindow = 8 # how much freedom is allowed in the spacing?
     stepSize = 4 # how much space between images that are checked?
@@ -141,15 +141,15 @@ def dynamic(model3, img):
 
             bestLetter = str(answer[0][0])
             bestProb = answer[0][1] / sum([answer[i][1] for i in range(len(answer))])
-            
-            if x2-x1 <= 16:
+
+            if x2-x1 <= 12:
                 Iweight = 0
                 for i in range(26):
                     if answer[i][0] == 'I':
                         Iweight = answer[i][1]
                 if bestLetter == 'I' or answer[0][1] < 0.5 and Iweight > 0.2:
                     bestLetter = 'I'
-                    bestProb = 0.97
+                    bestProb = 0.93
 
             if x2-x1 > 48 and bestLetter not in 'MW':
                 continue
@@ -194,7 +194,6 @@ def dynamic(model3, img):
     if printInfo: print(answerLoc)
     if printInfo: print(len(table))
     return table[answerLoc]
-                
 
 
 def slidingWindow(model2, img):
@@ -241,7 +240,7 @@ cnt = Counter()
 showImages = False
 numCorrect = 0
 sumED = 0
-numPredictions = 10
+numPredictions = 10000
 
 # test approaches
 for i in range(numPredictions):
@@ -261,14 +260,12 @@ for i in range(numPredictions):
     print("".join(char_list))
 
     dist,alignment = e.align(word3, true_word)
-    print("edit distance: %d" % dist)
+    print("%d: edit distance: %d" % (i, dist))
     sumED += dist
     for a in alignment:
         cnt[a] += 1
     if dist == 0:
         numCorrect += 1
- 
-    
 
     #slidingWindow(model2, img)
     if showImages:

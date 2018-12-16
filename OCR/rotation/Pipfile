@@ -11,6 +11,7 @@ keras-mxnet = "*"
 matplotlib = "*"
 scikit-image = "*"
 numpy = "*"
+tensorboard = "*"
 
 [dev-packages]
 

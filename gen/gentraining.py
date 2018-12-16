@@ -175,4 +175,9 @@ def generate_test_example(test_images, test_labels, character_set=None, min_char
                 character_set=character_set, min_chars=min_chars,
                  max_chars=max_chars, H=H, pixel_overlap=pixel_overlap, 
                  min_spacing=min_spacing, max_join=max_join)
+    elif any(2*c in ''.join(chars_list) for c in 'I'):
+        return generate_test_example(test_images, test_labels, 
+                character_set=character_set, min_chars=min_chars,
+                 max_chars=max_chars, H=H, pixel_overlap=pixel_overlap, 
+                 min_spacing=min_spacing, max_join=max_join)
     return (img, chars_list, char_starts, char_ends)
